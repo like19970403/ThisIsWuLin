@@ -41,6 +41,9 @@ export function createCharacter(name: string, sect: Sect): Character {
     equippedSkillIds: [],
     equipment: { weapon: null, armor: null },
     inventory: [],
+    // Phase 2b
+    consumables: {},
+    titles: [],
   };
 }
 

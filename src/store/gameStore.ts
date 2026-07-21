@@ -21,7 +21,15 @@ import {
   equipItem,
   unequipItem,
   buyItem,
+  buyConsumable,
+  useConsumable,
+  checkTitles,
+  getTitle,
+  resolveEncounter,
+  getEncounterNode,
+  ENCOUNTER_STARTS,
   type EquipSlot,
+  type EncounterNode,
 } from '../core/index.js';
 
 export { SAVE_VERSION };
@@ -44,6 +52,8 @@ interface GameState {
   notice: string | null;
   /** 目前開啟的商店可購買裝備 id（null = 未開商店）（Phase 2） */
   shopItems: string[] | null;
+  /** 進行中的奇遇節點（null = 無）（Phase 2b） */
+  pendingEncounter: EncounterNode | null;
 }
 
 interface GameActions {
@@ -64,9 +74,14 @@ interface GameActions {
   unequip: (slot: EquipSlot) => void;
   buy: (itemId: string) => void;
   closeShop: () => void;
+  // ─── Phase 2b ───
+  buyConsumableItem: (itemId: string) => void;
+  useConsumableItem: (itemId: string) => void;
+  chooseEncounter: (optionIndex: number) => void;
+  closeEncounter: () => void;
 }
 
-/** 共用：套用一個可能 throw 的角色變換，失敗轉 notice。 */
+/** 共用：套用一個可能 throw 的角色變換，失敗轉 notice。變換後自動檢查稱號解鎖。 */
 function tryMutate(
   set: (p: Partial<GameState>) => void,
   get: () => GameState & GameActions,
@@ -75,10 +90,19 @@ function tryMutate(
   const c = get().character;
   if (!c) return;
   try {
-    set({ character: fn(c), notice: null });
+    const { character, notice } = applyTitles(fn(c));
+    set({ character, notice });
   } catch (e) {
     set({ notice: e instanceof Error ? e.message : '操作失敗。' });
   }
+}
+
+/** 套用角色變換後檢查稱號解鎖；有新稱號則產生提示。 */
+function applyTitles(char: Character): { character: Character; notice: string | null } {
+  const { character, newlyUnlocked } = checkTitles(char);
+  if (newlyUnlocked.length === 0) return { character, notice: null };
+  const names = newlyUnlocked.map((id) => getTitle(id)?.name ?? id).join('、');
+  return { character, notice: `獲得稱號：${names}！` };
 }
 
 // Narrator 為模組層級可替換依賴（ADR-001：可插拔）。
@@ -105,6 +129,7 @@ export const useGameStore = create<GameState & GameActions>()(
       busy: false,
       notice: null,
       shopItems: null,
+      pendingEncounter: null,
 
       canAct: (cost: number) => {
         const c = get().character;
@@ -172,6 +197,11 @@ export const useGameStore = create<GameState & GameActions>()(
           // 觸發商店事件 → 開啟商店供玩家採買
           if (result.shopItemIds && result.shopItemIds.length > 0) {
             set({ shopItems: result.shopItemIds });
+          } else if (mathRng.next() < 0.18) {
+            // 一定機率觸發奇遇連鎖劇情
+            const startId = ENCOUNTER_STARTS[Math.floor(mathRng.next() * ENCOUNTER_STARTS.length)]!;
+            const node = getEncounterNode(startId);
+            if (node) set({ pendingEncounter: node });
           }
         } finally {
           set({ busy: false });
@@ -196,6 +226,35 @@ export const useGameStore = create<GameState & GameActions>()(
       unequip: (slot) => tryMutate(set, get, (c) => unequipItem(c, slot)),
       buy: (itemId) => tryMutate(set, get, (c) => buyItem(c, itemId)),
       closeShop: () => set({ shopItems: null }),
+
+      buyConsumableItem: (itemId) => tryMutate(set, get, (c) => buyConsumable(c, itemId)),
+      useConsumableItem: (itemId) => tryMutate(set, get, (c) => useConsumable(c, itemId)),
+
+      chooseEncounter: (optionIndex) => {
+        const c = get().character;
+        const node = get().pendingEncounter;
+        if (!c || !node) return;
+        try {
+          const out = resolveEncounter(c, node, optionIndex);
+          const { character } = applyTitles(out.character);
+          // 決定後續：進下一節點 / 觸發戰鬥 / 結束
+          if (out.nextNodeId) {
+            const next = getEncounterNode(out.nextNodeId);
+            set({ character, pendingEncounter: next ?? null });
+            if (out.text) appendLog(set, get, out.text);
+          } else if (out.battleEnemyId) {
+            // 奇遇引發戰鬥：結束奇遇，記錄引言（戰鬥結算沿用 doRoam 太重，這裡簡化為敘事提示）
+            set({ character, pendingEncounter: null });
+            appendLog(set, get, out.text || '一場惡鬥就此展開。');
+          } else {
+            set({ character, pendingEncounter: null });
+            if (out.text) appendLog(set, get, out.text);
+          }
+        } catch (e) {
+          set({ notice: e instanceof Error ? e.message : '選擇失敗。' });
+        }
+      },
+      closeEncounter: () => set({ pendingEncounter: null }),
 
       exportSave: () => {
         const { version, character, log } = get();
@@ -252,11 +311,23 @@ export const useGameStore = create<GameState & GameActions>()(
 function appendTurn(
   set: (partial: Partial<GameState>) => void,
   get: () => GameState,
-  character: Character,
+  rawCharacter: Character,
   text: string,
   summary: string,
 ): void {
+  // 回合結束後檢查稱號解鎖
+  const { character, notice } = applyTitles(rawCharacter);
   const entry: LogEntry = { id: nextLogId(), text, summary };
   const log = [entry, ...get().log].slice(0, MAX_LOG);
-  set({ character, log });
+  set({ character, log, ...(notice ? { notice } : {}) });
+}
+
+/** 只追加一條日誌，不改角色（奇遇敘事用）。 */
+function appendLog(
+  set: (partial: Partial<GameState>) => void,
+  get: () => GameState,
+  text: string,
+): void {
+  const entry: LogEntry = { id: nextLogId(), text, summary: text };
+  set({ log: [entry, ...get().log].slice(0, MAX_LOG) });
 }

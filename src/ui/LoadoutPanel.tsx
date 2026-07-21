@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import type { Character } from '../core/index.js';
-import { skillsForSect, getEquipItem, rarityMeta, MAX_EQUIPPED_SKILLS } from '../core/index.js';
+import { skillsForSect, getEquipItem, getConsumable, rarityMeta, MAX_EQUIPPED_SKILLS } from '../core/index.js';
 import { useGameStore } from '../store/gameStore.js';
 
 export function LoadoutPanel({ character }: { character: Character }) {
-  const [tab, setTab] = useState<'skill' | 'equip'>('skill');
+  const [tab, setTab] = useState<'skill' | 'equip' | 'item'>('skill');
+  const itemCount = Object.values(character.consumables).reduce((a, b) => a + b, 0);
   return (
     <div className="rounded-lg border border-stone-800 bg-stone-950/40 p-4">
       <div className="mb-3 flex gap-2 text-sm">
@@ -14,8 +15,45 @@ export function LoadoutPanel({ character }: { character: Character }) {
         <TabBtn active={tab === 'equip'} onClick={() => setTab('equip')}>
           裝備
         </TabBtn>
+        <TabBtn active={tab === 'item'} onClick={() => setTab('item')}>
+          丹藥（{itemCount}）
+        </TabBtn>
       </div>
-      {tab === 'skill' ? <SkillList character={character} /> : <EquipList character={character} />}
+      {tab === 'skill' && <SkillList character={character} />}
+      {tab === 'equip' && <EquipList character={character} />}
+      {tab === 'item' && <ConsumableList character={character} />}
+    </div>
+  );
+}
+
+function ConsumableList({ character }: { character: Character }) {
+  const use = useGameStore((s) => s.useConsumableItem);
+  const entries = Object.entries(character.consumables).filter(([, n]) => n > 0);
+  if (entries.length === 0) {
+    return <p className="text-xs text-stone-500">行囊中沒有丹藥。可在商店或奇遇取得。</p>;
+  }
+  return (
+    <div className="max-h-72 space-y-2 overflow-y-auto pr-1 text-sm">
+      {entries.map(([id, count]) => {
+        const item = getConsumable(id);
+        if (!item) return null;
+        return (
+          <div key={id} className="rounded border border-stone-700 bg-stone-900/40 p-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-amber-100">
+                {item.name} <span className="text-xs text-stone-400">×{count}</span>
+              </span>
+              <button
+                onClick={() => use(id)}
+                className="rounded bg-emerald-800 px-2 py-0.5 text-xs text-emerald-50 hover:bg-emerald-700"
+              >
+                使用
+              </button>
+            </div>
+            <div className="mt-1 text-xs text-stone-400">{item.description}</div>
+          </div>
+        );
+      })}
     </div>
   );
 }

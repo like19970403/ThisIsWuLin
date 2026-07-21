@@ -1,6 +1,8 @@
 import type { Attributes, Character } from './types.js';
 import { getSkill, MAX_EQUIPPED_SKILLS } from './data/skills.js';
 import { getEquipItem } from './data/equipment.js';
+import { getConsumable } from './data/consumables.js';
+import { clamp } from './rules.js';
 
 // ─── 功法 ───
 
@@ -83,6 +85,67 @@ export function buyItem(char: Character, itemId: string): Character {
   if (!item) throw new Error('查無此裝備');
   if (char.silver < item.price) throw new Error('銀兩不足');
   return { ...char, silver: char.silver - item.price, inventory: [...char.inventory, itemId] };
+}
+
+// ─── 消耗品（SPEC-003）───
+
+/** 購買消耗品：扣銀兩、數量 +1。 */
+export function buyConsumable(char: Character, itemId: string): Character {
+  const item = getConsumable(itemId);
+  if (!item) throw new Error('查無此物');
+  if (char.silver < item.price) throw new Error('銀兩不足');
+  return {
+    ...char,
+    silver: char.silver - item.price,
+    consumables: { ...char.consumables, [itemId]: (char.consumables[itemId] ?? 0) + 1 },
+  };
+}
+
+/** 直接獲得消耗品（掉落/獎勵），不扣銀兩。 */
+export function addConsumable(char: Character, itemId: string, count = 1): Character {
+  return {
+    ...char,
+    consumables: { ...char.consumables, [itemId]: (char.consumables[itemId] ?? 0) + count },
+  };
+}
+
+function addPartialAttr(a: Attributes, d: Partial<Attributes>): Attributes {
+  return {
+    gen: a.gen + (d.gen ?? 0),
+    wu: a.wu + (d.wu ?? 0),
+    shen: a.shen + (d.shen ?? 0),
+    nei: a.nei + (d.nei ?? 0),
+  };
+}
+
+/**
+ * 使用一個消耗品：套用效果、數量 -1（歸零則移除）。純函式。
+ * heal：即時回氣血/體力（clamp 上限）；permanentAttr：永久加屬性（重算 maxHp）。
+ */
+export function useConsumable(char: Character, itemId: string): Character {
+  const item = getConsumable(itemId);
+  if (!item) throw new Error('查無此物');
+  const count = char.consumables[itemId] ?? 0;
+  if (count <= 0) throw new Error('沒有這個物品');
+
+  // 先扣數量
+  const consumables = { ...char.consumables };
+  if (count - 1 <= 0) delete consumables[itemId];
+  else consumables[itemId] = count - 1;
+
+  let c: Character = { ...char, consumables };
+
+  if (item.effect.kind === 'heal') {
+    if (item.effect.hp) c = { ...c, hp: clamp(c.hp + item.effect.hp, 0, c.maxHp) };
+    if (item.effect.stamina) c = { ...c, stamina: clamp(c.stamina + item.effect.stamina, 0, c.maxStamina) };
+  } else {
+    // permanentAttr：加屬性；若動到根骨則重算 maxHp 並補滿差額
+    const attrs = addPartialAttr(c.attrs, item.effect.attr);
+    const maxHp = 20 + attrs.gen * 5;
+    const hpGain = maxHp - c.maxHp;
+    c = { ...c, attrs, maxHp, hp: clamp(c.hp + Math.max(0, hpGain), 0, maxHp) };
+  }
+  return c;
 }
 
 // ─── 有效屬性（基礎 + 功法被動 + 裝備加成）───

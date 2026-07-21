@@ -26,6 +26,24 @@ export const SECTS: readonly Sect[] = [
     description: '劍宗氣宗兼備，內力與身法並重。',
     attrBonus: { nei: 2, shen: 1, wu: 1 },
   },
+  {
+    id: 'gaibang',
+    name: '丐幫',
+    description: '天下第一大幫，根骨紮實，人多勢眾。',
+    attrBonus: { gen: 3, shen: 1 },
+  },
+  {
+    id: 'mingjiao',
+    name: '明教',
+    description: '光明頂上，內力剛猛，行事不拘。',
+    attrBonus: { nei: 3, gen: 1 },
+  },
+  {
+    id: 'xiaoyao',
+    name: '逍遙派',
+    description: '逍遙自在，身法悟性冠絕天下。',
+    attrBonus: { shen: 2, wu: 2, nei: 1 },
+  },
 ] as const;
 
 export function getSect(id: string): Sect | undefined {

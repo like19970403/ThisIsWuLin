@@ -1,8 +1,9 @@
 import type { Character } from './types.js';
 import { clamp } from './rules.js';
+import { TITLE_CONDITIONS } from './data/titles.js';
 
-/** 存檔 schema 版本。Phase 2 由 1 → 2。 */
-export const SAVE_VERSION = 2;
+/** 存檔 schema 版本。1→2（Phase 2 成長）→3（Phase 2b 消耗品/稱號）。 */
+export const SAVE_VERSION = 3;
 
 export const MAX_LEVEL = 30;
 
@@ -95,7 +96,36 @@ export function migrateCharacter(raw: unknown): Character | null {
     equippedSkillIds: strArr(r.equippedSkillIds),
     equipment: migrateEquipment(r.equipment),
     inventory: strArr(r.inventory),
+    // v3 欄位：v1/v2 存檔沒有 → 補預設；v3 已有 → 沿用（冪等）
+    consumables: migrateConsumables(r.consumables),
+    titles: strArr(r.titles),
   };
+}
+
+/**
+ * 檢查並解鎖達成條件的稱號。純函式、冪等（已解鎖的不重複加）。
+ * 回傳新角色 + 這次新解鎖的稱號 id 陣列（供提示）。
+ */
+export function checkTitles(char: Character): { character: Character; newlyUnlocked: string[] } {
+  const newlyUnlocked: string[] = [];
+  for (const [id, cond] of Object.entries(TITLE_CONDITIONS)) {
+    if (!char.titles.includes(id) && cond(char)) {
+      newlyUnlocked.push(id);
+    }
+  }
+  if (newlyUnlocked.length === 0) return { character: char, newlyUnlocked };
+  return { character: { ...char, titles: [...char.titles, ...newlyUnlocked] }, newlyUnlocked };
+}
+
+function migrateConsumables(v: unknown): Record<string, number> {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const out: Record<string, number> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (typeof val === 'number' && Number.isFinite(val) && val > 0) out[k] = Math.floor(val);
+    }
+    return out;
+  }
+  return {};
 }
 
 function numOr(v: unknown, fallback: number): number {

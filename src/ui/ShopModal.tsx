@@ -1,10 +1,14 @@
 import type { Character } from '../core/index.js';
-import { getEquipItem, rarityMeta } from '../core/index.js';
+import { getEquipItem, getConsumable, rarityMeta } from '../core/index.js';
 import { useGameStore } from '../store/gameStore.js';
+
+/** 商店常備丹藥。 */
+const SHOP_CONSUMABLES = ['pill_hp', 'pill_hp_big', 'wine', 'dried_meat'];
 
 export function ShopModal({ character }: { character: Character }) {
   const shopItems = useGameStore((s) => s.shopItems);
   const buy = useGameStore((s) => s.buy);
+  const buyConsumable = useGameStore((s) => s.buyConsumableItem);
   const closeShop = useGameStore((s) => s.closeShop);
 
   if (!shopItems) return null;
@@ -46,6 +50,32 @@ export function ShopModal({ character }: { character: Character }) {
               </div>
             );
           })}
+        </div>
+
+        <div className="mt-3 border-t border-stone-800 pt-3">
+          <div className="mb-2 text-xs text-stone-400">丹藥雜貨</div>
+          <div className="space-y-2">
+            {SHOP_CONSUMABLES.map((id) => {
+              const item = getConsumable(id);
+              if (!item) return null;
+              const affordable = character.silver >= item.price;
+              return (
+                <div key={id} className="flex items-center justify-between rounded border border-stone-700 bg-stone-900/40 p-2">
+                  <div>
+                    <div className="text-sm font-semibold text-emerald-200">{item.name}</div>
+                    <div className="text-xs text-stone-400">{item.description}</div>
+                  </div>
+                  <button
+                    disabled={!affordable}
+                    onClick={() => buyConsumable(id)}
+                    className="ml-3 shrink-0 rounded bg-emerald-800 px-3 py-1 text-sm text-emerald-50 disabled:bg-stone-800 disabled:text-stone-600"
+                  >
+                    {item.price} 銀
+                  </button>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <button

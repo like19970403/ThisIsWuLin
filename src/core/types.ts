@@ -55,6 +55,12 @@ export interface Character {
   equipment: Equipment;
   /** 背包：持有但未穿戴的裝備 id */
   inventory: string[];
+
+  // ─── Phase 2b（SPEC-003）───
+  /** 消耗品：id → 數量 */
+  consumables: Record<string, number>;
+  /** 已解鎖的稱號 id */
+  titles: string[];
 }
 
 /** 功法定義（資料表驅動）。Phase 2：被動屬性加成 + 戰鬥發動的傷害倍率。 */
@@ -139,6 +145,50 @@ export interface SceneContext {
     /** 人類可讀的結果摘要，例如「切磋獲勝，獲得銀兩×50」 */
     summary: string;
   };
+}
+
+/** 消耗品效果種類：即時回復 / 永久加屬性。 */
+export type ConsumableEffect =
+  | { kind: 'heal'; hp?: number; stamina?: number }
+  | { kind: 'permanentAttr'; attr: Partial<Attributes> };
+
+/** 消耗品定義（資料表驅動）。 */
+export interface Consumable {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  effect: ConsumableEffect;
+}
+
+/** 稱號/成就定義。unlock 為純函式判定條件（給定角色回傳是否達成）。 */
+export interface Title {
+  id: string;
+  name: string;
+  description: string;
+}
+
+/** 奇遇連鎖：一個節點含情境文字與若干選項；選項導向結果或下一節點。 */
+export interface EncounterOption {
+  label: string;
+  /** 選此項所需條件（銀兩/等級），不足則禁用 */
+  reqSilver?: number;
+  reqLevel?: number;
+  /** 選擇結果 */
+  result: EncounterResult;
+}
+
+export type EncounterResult =
+  | { kind: 'reward'; silver?: number; fame?: number; stamina?: number; attr?: Partial<Attributes>; itemId?: string; text: string }
+  | { kind: 'battle'; enemyId: string; text: string }
+  | { kind: 'next'; nodeId: string }
+  | { kind: 'end'; text: string };
+
+export interface EncounterNode {
+  id: string;
+  title: string;
+  text: string;
+  options: EncounterOption[];
 }
 
 /** 敘事供應器介面 — 遊戲邏輯只認這個，不認是哪家 AI（ADR-001 §決策.5）。 */

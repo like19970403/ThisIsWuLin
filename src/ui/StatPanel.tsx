@@ -1,5 +1,5 @@
 import type { Character } from '../core/index.js';
-import { getSect, effectiveAttrs, expToNext } from '../core/index.js';
+import { getSect, effectiveAttrs, expToNext, getTitle } from '../core/index.js';
 
 function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
@@ -63,6 +63,23 @@ export function StatPanel({ character }: { character: Character }) {
           聲望 <span className="font-semibold text-amber-200">{character.fame}</span>
         </span>
       </div>
+
+      {character.titles.length > 0 && (
+        <div className="mt-4 border-t border-stone-800 pt-3">
+          <div className="mb-1 text-xs text-stone-400">稱號</div>
+          <div className="flex flex-wrap gap-1.5">
+            {character.titles.map((id) => (
+              <span
+                key={id}
+                className="rounded bg-amber-950/60 px-2 py-0.5 text-xs text-amber-300"
+                title={getTitle(id)?.description}
+              >
+                {getTitle(id)?.name ?? id}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

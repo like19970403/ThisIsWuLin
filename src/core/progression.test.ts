@@ -119,7 +119,29 @@ describe('migrateCharacter', () => {
     expect(m.level).toBe(1); // 非數字 → 1
   });
 
-  it('SAVE_VERSION 為 2', () => {
-    expect(SAVE_VERSION).toBe(2);
+  it('SAVE_VERSION 為 3', () => {
+    expect(SAVE_VERSION).toBe(3);
+  });
+
+  it('v2 存檔遷移至 v3：補上 consumables/titles', () => {
+    // v2 有 Phase 2 欄位但無 Phase 2b 欄位
+    const v2 = {
+      name: '二版俠', sectId: 'huashan',
+      attrs: { gen: 12, wu: 10, shen: 11, nei: 13 },
+      stamina: 60, maxStamina: 100, hp: 70, maxHp: 90, silver: 300, fame: 50,
+      level: 4, exp: 20, learnedSkillIds: ['basic_fist'], equippedSkillIds: ['basic_fist'],
+      equipment: { weapon: 'iron_sword', armor: null }, inventory: [],
+    };
+    const m = migrateCharacter(v2)!;
+    expect(m.level).toBe(4); // v2 進度保留
+    expect(m.learnedSkillIds).toEqual(['basic_fist']);
+    expect(m.consumables).toEqual({}); // v3 新欄位補預設
+    expect(m.titles).toEqual([]);
+  });
+
+  it('v3 消耗品計數容錯（非正數/非數字剔除）', () => {
+    const c = { name: 'x', attrs: { gen: 5, wu: 5, shen: 5, nei: 5 }, consumables: { pill_hp: 3, bad: 'no', neg: -1, zero: 0 } };
+    const m = migrateCharacter(c)!;
+    expect(m.consumables).toEqual({ pill_hp: 3 });
   });
 });

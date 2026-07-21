@@ -6,6 +6,7 @@ import { NarrativeLog } from './NarrativeLog.js';
 import { SaveManager } from './SaveManager.js';
 import { LoadoutPanel } from './LoadoutPanel.js';
 import { ShopModal } from './ShopModal.js';
+import { EncounterModal } from './EncounterModal.js';
 
 export function GameScreen({ character, log }: { character: Character; log: LogEntry[] }) {
   return (
@@ -23,6 +24,7 @@ export function GameScreen({ character, log }: { character: Character; log: LogE
         <NarrativeLog log={log} />
       </div>
       <ShopModal character={character} />
+      <EncounterModal character={character} />
     </div>
   );
 }
