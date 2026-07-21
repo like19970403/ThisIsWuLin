@@ -1,5 +1,5 @@
 import type { Character } from '../core/index.js';
-import { getEquipItem } from '../core/index.js';
+import { getEquipItem, rarityMeta } from '../core/index.js';
 import { useGameStore } from '../store/gameStore.js';
 
 export function ShopModal({ character }: { character: Character }) {
@@ -30,7 +30,10 @@ export function ShopModal({ character }: { character: Character }) {
             return (
               <div key={id} className="flex items-center justify-between rounded border border-stone-700 bg-stone-900/40 p-2">
                 <div>
-                  <div className="text-sm font-semibold text-amber-100">{item.name}</div>
+                  <div className="text-sm font-semibold">
+                    <span className={rarityMeta(item.rarity).color}>{item.name}</span>
+                    <span className="ml-1 text-xs text-stone-500">{rarityMeta(item.rarity).label}</span>
+                  </div>
                   <div className="text-xs text-stone-400">{item.description}</div>
                 </div>
                 <button

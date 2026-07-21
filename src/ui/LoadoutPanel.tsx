@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Character } from '../core/index.js';
-import { SKILLS, getEquipItem, MAX_EQUIPPED_SKILLS } from '../core/index.js';
+import { skillsForSect, getEquipItem, rarityMeta, MAX_EQUIPPED_SKILLS } from '../core/index.js';
 import { useGameStore } from '../store/gameStore.js';
 
 export function LoadoutPanel({ character }: { character: Character }) {
@@ -35,9 +35,10 @@ function SkillList({ character }: { character: Character }) {
   const learn = useGameStore((s) => s.learn);
   const toggleSkill = useGameStore((s) => s.toggleSkill);
 
+  const available = skillsForSect(character.sectId);
   return (
     <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
-      {SKILLS.map((skill) => {
+      {available.map((skill) => {
         const learned = character.learnedSkillIds.includes(skill.id);
         const equipped = character.equippedSkillIds.includes(skill.id);
         const canLearn = character.level >= skill.reqLevel && character.silver >= skill.cost;
@@ -46,6 +47,7 @@ function SkillList({ character }: { character: Character }) {
             <div className="flex items-center justify-between">
               <span className="font-semibold text-amber-100">
                 {skill.name}
+                {skill.sectId && <span className="ml-1 text-xs text-purple-400">本派絕學</span>}
                 {equipped && <span className="ml-1 text-xs text-emerald-400">◆上陣</span>}
               </span>
               {!learned ? (
@@ -97,7 +99,7 @@ function EquipList({ character }: { character: Character }) {
               if (!item) return null;
               return (
                 <div key={`${id}-${i}`} className="flex items-center justify-between rounded bg-stone-900/40 px-2 py-1">
-                  <span className="text-stone-200">{item.name}</span>
+                  <span className={rarityMeta(item.rarity).color}>{item.name}</span>
                   <button
                     onClick={() => equip(id)}
                     className="rounded bg-stone-700 px-2 py-0.5 text-xs text-stone-100 hover:bg-stone-600"
@@ -128,7 +130,7 @@ function SlotBox({
       <div className="text-xs text-stone-400">{label}</div>
       {item ? (
         <div className="flex items-center justify-between">
-          <span className="text-amber-100">{item.name}</span>
+          <span className={rarityMeta(item.rarity).color}>{item.name}</span>
           <button onClick={onRemove} className="text-xs text-stone-500 hover:text-rose-400">
             卸
           </button>

@@ -9,6 +9,10 @@ export function learnSkill(char: Character, skillId: string): Character {
   const skill = getSkill(skillId);
   if (!skill) throw new Error('查無此功法');
   if (char.learnedSkillIds.includes(skillId)) throw new Error('已學會此功法');
+  // 門派專屬：外派不可學（本派絕學不外傳）
+  if (skill.sectId && skill.sectId !== char.sectId) {
+    throw new Error('此乃他派絕學，無緣修習');
+  }
   if (char.level < skill.reqLevel) throw new Error(`需達 ${skill.reqLevel} 級方可修習`);
   if (char.silver < skill.cost) throw new Error('銀兩不足');
   return {

@@ -44,6 +44,43 @@ export const ENEMIES: readonly Enemy[] = [
     hp: 100,
     reward: { silver: 200, fame: 40 },
   },
+  // ─── 進階敵人 ───
+  {
+    id: 'poison_master',
+    name: '五毒教主',
+    attrs: { gen: 8, wu: 10, shen: 12, nei: 11 },
+    hp: 90,
+    reward: { silver: 180, fame: 35 },
+  },
+  {
+    id: 'blade_gang',
+    name: '刀幫打手',
+    attrs: { gen: 12, wu: 5, shen: 8, nei: 7 },
+    hp: 80,
+    reward: { silver: 120, fame: 18 },
+  },
+  {
+    id: 'ronin',
+    name: '東瀛浪人',
+    attrs: { gen: 11, wu: 9, shen: 13, nei: 12 },
+    hp: 110,
+    reward: { silver: 220, fame: 45 },
+  },
+  // ─── BOSS ───
+  {
+    id: 'demon_lord',
+    name: '魔教教主',
+    attrs: { gen: 18, wu: 16, shen: 18, nei: 22 },
+    hp: 200,
+    reward: { silver: 800, fame: 120 },
+  },
+  {
+    id: 'sword_saint',
+    name: '劍聖',
+    attrs: { gen: 16, wu: 18, shen: 22, nei: 20 },
+    hp: 180,
+    reward: { silver: 700, fame: 150 },
+  },
 ] as const;
 
 export function getEnemy(id: string): Enemy | undefined {

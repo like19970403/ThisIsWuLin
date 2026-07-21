@@ -12,7 +12,7 @@ import {
 } from './loadout.js';
 import { createCharacter, resolveBattle } from './rules.js';
 import { getSect } from './data/sects.js';
-import { getSkill, MAX_EQUIPPED_SKILLS } from './data/skills.js';
+import { getSkill, skillsForSect, MAX_EQUIPPED_SKILLS } from './data/skills.js';
 import { getEquipItem } from './data/equipment.js';
 import { getEnemy } from './data/enemies.js';
 import { seededRng } from './rng.js';
@@ -47,6 +47,26 @@ describe('功法：學習', () => {
 
   it('查無功法拒絕', () => {
     expect(() => learnSkill(rich(), 'ghost_skill')).toThrow();
+  });
+
+  it('本派可學專屬功法（少林學降龍伏虎）', () => {
+    const c = rich(); // shaolin
+    const after = learnSkill(c, 'shaolin_dragon');
+    expect(after.learnedSkillIds).toContain('shaolin_dragon');
+  });
+
+  it('外派不可學他派專屬（少林學不了武當太極劍）', () => {
+    const c = rich(); // shaolin
+    expect(() => learnSkill(c, 'wudang_taiji_sword')).toThrow('他派');
+  });
+
+  it('skillsForSect 過濾他派專屬', () => {
+    const shaolinSkills = skillsForSect('shaolin');
+    // 不含武當專屬
+    expect(shaolinSkills.some((s) => s.id === 'wudang_taiji_sword')).toBe(false);
+    // 含少林專屬與通用
+    expect(shaolinSkills.some((s) => s.id === 'shaolin_dragon')).toBe(true);
+    expect(shaolinSkills.some((s) => s.id === 'basic_fist')).toBe(true);
   });
 });
 

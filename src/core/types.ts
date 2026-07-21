@@ -70,7 +70,12 @@ export interface Skill {
   passive: Partial<Attributes>;
   /** 主動：戰鬥中每回合的額外傷害倍率（以內力為基底），0 表示純被動 */
   damageMultiplier: number;
+  /** 門派專屬：僅該門派可學（本派可學、外派禁止）。省略＝通用功法。 */
+  sectId?: string;
 }
+
+/** 裝備稀有度。影響 UI 顯示顏色與掉落感受。 */
+export type Rarity = 'common' | 'fine' | 'rare' | 'legendary';
 
 /** 裝備種類。 */
 export type EquipSlot = 'weapon' | 'armor';
@@ -85,6 +90,8 @@ export interface EquipItem {
   price: number;
   /** 穿戴後附加的屬性 */
   bonus: Partial<Attributes>;
+  /** 稀有度。省略視為 common。 */
+  rarity?: Rarity;
 }
 
 /** 敵人定義（資料表驅動）。 */
