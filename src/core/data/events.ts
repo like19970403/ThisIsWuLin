@@ -44,4 +44,41 @@ export const EVENTS: readonly GameEvent[] = [
     title: '風平浪靜',
     outcome: { kind: 'nothing' },
   },
+  // ─── Phase 2 新增 ───
+  {
+    id: 'bandit_chief_fight',
+    weight: 8,
+    title: '賊窩尋仇',
+    outcome: { kind: 'battle', enemyId: 'bandit_chief' },
+  },
+  {
+    id: 'cultist_ambush',
+    weight: 7,
+    title: '邪教作亂',
+    outcome: { kind: 'battle', enemyId: 'evil_cultist' },
+  },
+  {
+    id: 'lone_swordsman',
+    weight: 4,
+    title: '劍客邀戰',
+    outcome: { kind: 'battle', enemyId: 'sword_master' },
+  },
+  {
+    id: 'drop_sword',
+    weight: 8,
+    title: '拾得遺物',
+    outcome: { kind: 'loot', itemId: 'iron_sword' },
+  },
+  {
+    id: 'drop_armor',
+    weight: 6,
+    title: '荒屋探寶',
+    outcome: { kind: 'loot', itemId: 'leather_armor' },
+  },
+  {
+    id: 'town_market',
+    weight: 12,
+    title: '路過集鎮',
+    outcome: { kind: 'shop', itemIds: ['wooden_sword', 'iron_sword', 'cloth_robe', 'leather_armor'] },
+  },
 ] as const;

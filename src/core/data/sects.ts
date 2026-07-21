@@ -20,6 +20,12 @@ export const SECTS: readonly Sect[] = [
     description: '身法輕靈，悟性出眾。',
     attrBonus: { shen: 2, wu: 2 },
   },
+  {
+    id: 'huashan',
+    name: '華山',
+    description: '劍宗氣宗兼備，內力與身法並重。',
+    attrBonus: { nei: 2, shen: 1, wu: 1 },
+  },
 ] as const;
 
 export function getSect(id: string): Sect | undefined {

@@ -34,6 +34,13 @@ export function createCharacter(name: string, sect: Sect): Character {
     maxHp,
     silver: 0,
     fame: 0,
+    // Phase 2 成長欄位
+    level: 1,
+    exp: 0,
+    learnedSkillIds: [],
+    equippedSkillIds: [],
+    equipment: { weapon: null, armor: null },
+    inventory: [],
   };
 }
 
@@ -97,19 +104,31 @@ export interface BattleResult {
  * 身法高者先手；每次傷害 = 攻方戰力/5 ± 隨機浮動，收斂不為負。
  * 這是 SPEC-001 Done When 要求「戰鬥結算為純函式且有單元測試」的核心。
  */
-export function resolveBattle(char: Character, enemy: Enemy, rng: Rng): BattleResult {
+export interface BattleOpts {
+  /** 玩家有效屬性（含功法被動+裝備）。省略則用 char.attrs。 */
+  playerAttrs?: Attributes;
+  /** 已裝備功法的總傷害倍率（額外傷害）。省略為 0。 */
+  skillMultiplier?: number;
+}
+
+export function resolveBattle(char: Character, enemy: Enemy, rng: Rng, opts: BattleOpts = {}): BattleResult {
   let playerHp = char.hp;
   let enemyHp = enemy.hp;
   const rounds: BattleRound[] = [];
 
-  const playerFirst = char.attrs.shen >= enemy.attrs.shen;
-  const pPower = combatPower(char.attrs);
+  const pAttrs = opts.playerAttrs ?? char.attrs;
+  const skillMult = opts.skillMultiplier ?? 0;
+
+  const playerFirst = pAttrs.shen >= enemy.attrs.shen;
+  const pPower = combatPower(pAttrs);
   const ePower = combatPower(enemy.attrs);
 
-  const hit = (power: number): number => {
+  const hit = (power: number, mult = 0): number => {
     const base = Math.max(1, Math.floor(power / 5));
     const swing = randInt(rng, -1, 2); // -1..+2 浮動
-    return Math.max(1, base + swing);
+    // 功法額外傷害：以內力為基底乘上倍率
+    const skillDmg = Math.floor(pAttrs.nei * mult);
+    return Math.max(1, base + swing + skillDmg);
   };
 
   // 安全上限，避免任何情況下的無限迴圈
@@ -119,7 +138,7 @@ export function resolveBattle(char: Character, enemy: Enemy, rng: Rng): BattleRe
 
   while (playerHp > 0 && enemyHp > 0 && turn < MAX_ROUNDS) {
     if (playerTurn) {
-      const dmg = hit(pPower);
+      const dmg = hit(pPower, skillMult);
       enemyHp = clamp(enemyHp - dmg, 0, enemy.hp);
       rounds.push({ attacker: 'player', damage: dmg, playerHp, enemyHp });
     } else {

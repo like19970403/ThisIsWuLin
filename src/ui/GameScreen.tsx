@@ -4,6 +4,8 @@ import { StatPanel } from './StatPanel.js';
 import { ActionBar } from './ActionBar.js';
 import { NarrativeLog } from './NarrativeLog.js';
 import { SaveManager } from './SaveManager.js';
+import { LoadoutPanel } from './LoadoutPanel.js';
+import { ShopModal } from './ShopModal.js';
 
 export function GameScreen({ character, log }: { character: Character; log: LogEntry[] }) {
   return (
@@ -15,10 +17,12 @@ export function GameScreen({ character, log }: { character: Character; log: LogE
         <div className="space-y-5">
           <StatPanel character={character} />
           <ActionBar />
+          <LoadoutPanel character={character} />
           <SaveManager />
         </div>
         <NarrativeLog log={log} />
       </div>
+      <ShopModal character={character} />
     </div>
   );
 }

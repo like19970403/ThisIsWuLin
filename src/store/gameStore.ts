@@ -13,10 +13,18 @@ import {
   TRAIN_STAMINA_COST,
   ROAM_STAMINA_COST,
   TemplateNarrator,
+  SAVE_VERSION,
+  migrateCharacter,
+  learnSkill,
+  equipSkill,
+  unequipSkill,
+  equipItem,
+  unequipItem,
+  buyItem,
+  type EquipSlot,
 } from '../core/index.js';
 
-/** 存檔 schema 版本 —— 版本不符時拒絕載入（SPEC-001 Edge Case）。 */
-export const SAVE_VERSION = 1;
+export { SAVE_VERSION };
 
 export interface LogEntry {
   id: number;
@@ -34,6 +42,8 @@ interface GameState {
   busy: boolean;
   /** 一次性提示訊息（體力不足、匯入失敗等） */
   notice: string | null;
+  /** 目前開啟的商店可購買裝備 id（null = 未開商店）（Phase 2） */
+  shopItems: string[] | null;
 }
 
 interface GameActions {
@@ -47,6 +57,28 @@ interface GameActions {
   resetGame: () => void;
   /** 可否執行需要體力的行動 */
   canAct: (cost: number) => boolean;
+  // ─── Phase 2 ───
+  learn: (skillId: string) => void;
+  toggleSkill: (skillId: string) => void;
+  equip: (itemId: string) => void;
+  unequip: (slot: EquipSlot) => void;
+  buy: (itemId: string) => void;
+  closeShop: () => void;
+}
+
+/** 共用：套用一個可能 throw 的角色變換，失敗轉 notice。 */
+function tryMutate(
+  set: (p: Partial<GameState>) => void,
+  get: () => GameState & GameActions,
+  fn: (c: Character) => Character,
+): void {
+  const c = get().character;
+  if (!c) return;
+  try {
+    set({ character: fn(c), notice: null });
+  } catch (e) {
+    set({ notice: e instanceof Error ? e.message : '操作失敗。' });
+  }
 }
 
 // Narrator 為模組層級可替換依賴（ADR-001：可插拔）。
@@ -72,6 +104,7 @@ export const useGameStore = create<GameState & GameActions>()(
       log: [],
       busy: false,
       notice: null,
+      shopItems: null,
 
       canAct: (cost: number) => {
         const c = get().character;
@@ -136,6 +169,10 @@ export const useGameStore = create<GameState & GameActions>()(
           const result = doRoam(c, mathRng);
           const text = await narrateTurn(result, narrator);
           appendTurn(set, get, result.character, text, result.log);
+          // 觸發商店事件 → 開啟商店供玩家採買
+          if (result.shopItemIds && result.shopItemIds.length > 0) {
+            set({ shopItems: result.shopItemIds });
+          }
         } finally {
           set({ busy: false });
         }
@@ -150,6 +187,16 @@ export const useGameStore = create<GameState & GameActions>()(
 
       clearNotice: () => set({ notice: null }),
 
+      learn: (skillId) => tryMutate(set, get, (c) => learnSkill(c, skillId)),
+      toggleSkill: (skillId) =>
+        tryMutate(set, get, (c) =>
+          c.equippedSkillIds.includes(skillId) ? unequipSkill(c, skillId) : equipSkill(c, skillId),
+        ),
+      equip: (itemId) => tryMutate(set, get, (c) => equipItem(c, itemId)),
+      unequip: (slot) => tryMutate(set, get, (c) => unequipItem(c, slot)),
+      buy: (itemId) => tryMutate(set, get, (c) => buyItem(c, itemId)),
+      closeShop: () => set({ shopItems: null }),
+
       exportSave: () => {
         const { version, character, log } = get();
         return JSON.stringify({ version, character, log }, null, 2);
@@ -157,19 +204,22 @@ export const useGameStore = create<GameState & GameActions>()(
 
       importSave: (json) => {
         try {
-          const data = JSON.parse(json) as Partial<GameState>;
-          if (data.version !== SAVE_VERSION) {
-            set({ notice: `存檔版本不符（需 v${SAVE_VERSION}），未載入。` });
+          const data = JSON.parse(json) as { version?: number; character?: unknown; log?: unknown };
+          // 更高版本（未來格式）無法識別 → 拒絕，避免資料遺失
+          if (typeof data.version === 'number' && data.version > SAVE_VERSION) {
+            set({ notice: `存檔版本較新（v${data.version}），此版本無法讀取。` });
             return false;
           }
-          if (!data.character || typeof data.character.name !== 'string') {
+          // 舊版或當前版：一律經遷移補齊欄位（SPEC-002）
+          const migrated = migrateCharacter(data.character);
+          if (!migrated) {
             set({ notice: '存檔格式錯誤，未載入。' });
             return false;
           }
           set({
             version: SAVE_VERSION,
-            character: data.character,
-            log: Array.isArray(data.log) ? data.log : [],
+            character: migrated,
+            log: Array.isArray(data.log) ? (data.log as LogEntry[]) : [],
             notice: '存檔已載入。',
           });
           return true;
@@ -185,6 +235,15 @@ export const useGameStore = create<GameState & GameActions>()(
       name: 'wulin-save-v1',
       version: SAVE_VERSION,
       partialize: (s) => ({ version: s.version, character: s.character, log: s.log }),
+      // localStorage 中的舊版存檔（含 Phase 1 的 v1）在 rehydrate 時自動遷移補欄位。
+      migrate: (persisted: unknown) => {
+        const p = (persisted ?? {}) as { character?: unknown; log?: unknown };
+        return {
+          version: SAVE_VERSION,
+          character: migrateCharacter(p.character),
+          log: Array.isArray(p.log) ? (p.log as LogEntry[]) : [],
+        } as Partial<GameState>;
+      },
     },
   ),
 );
