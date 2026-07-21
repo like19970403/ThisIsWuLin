@@ -7,7 +7,7 @@ export function LoadoutPanel({ character }: { character: Character }) {
   const [tab, setTab] = useState<'skill' | 'equip' | 'item'>('skill');
   const itemCount = Object.values(character.consumables).reduce((a, b) => a + b, 0);
   return (
-    <div className="rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+    <div className="panel">
       <div className="mb-3 flex gap-2 text-sm">
         <TabBtn active={tab === 'skill'} onClick={() => setTab('skill')}>
           功法（{character.equippedSkillIds.length}/{MAX_EQUIPPED_SKILLS}）
