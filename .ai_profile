@@ -1,0 +1,11 @@
+type: system
+level: autonomous
+mode: multi-agent
+workflow: standard
+hitl: minimal
+rag: enabled
+autonomous: enabled
+orchestrator: enabled
+autopilot: enabled
+coding_style: enabled
+name: ThisIsWuLin
