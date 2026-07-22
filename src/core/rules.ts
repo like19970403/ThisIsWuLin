@@ -44,6 +44,10 @@ export function createCharacter(name: string, sect: Sect): Character {
     // Phase 2b
     consumables: {},
     titles: [],
+    // Phase 3
+    rankId: 'wanderer',
+    materials: {},
+    quests: {},
   };
 }
 

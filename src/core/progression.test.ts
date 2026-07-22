@@ -119,8 +119,37 @@ describe('migrateCharacter', () => {
     expect(m.level).toBe(1); // 非數字 → 1
   });
 
-  it('SAVE_VERSION 為 3', () => {
-    expect(SAVE_VERSION).toBe(3);
+  it('SAVE_VERSION 為 4', () => {
+    expect(SAVE_VERSION).toBe(4);
+  });
+
+  it('v3 存檔遷移至 v4：補上 rankId/materials/quests', () => {
+    const v3 = {
+      name: '三版俠', sectId: 'shaolin',
+      attrs: { gen: 10, wu: 8, shen: 9, nei: 11 },
+      stamina: 60, maxStamina: 100, hp: 70, maxHp: 90, silver: 500, fame: 100,
+      level: 6, exp: 20, learnedSkillIds: [], equippedSkillIds: [],
+      equipment: { weapon: null, armor: null }, inventory: [],
+      consumables: { pill_hp: 2 }, titles: ['novice'],
+    };
+    const m = migrateCharacter(v3)!;
+    expect(m.fame).toBe(100); // v3 進度保留
+    expect(m.consumables).toEqual({ pill_hp: 2 });
+    expect(m.rankId).toBe('wanderer'); // v4 新欄位補預設
+    expect(m.materials).toEqual({});
+    expect(m.quests).toEqual({});
+  });
+
+  it('v4 冪等：已有職位/任務資料不變', () => {
+    const c = {
+      name: 'x', attrs: { gen: 5, wu: 5, shen: 5, nei: 5 },
+      rankId: 'warrior', materials: { iron: 3 },
+      quests: { q1: { accepted: true, progress: 2, claimed: false } },
+    };
+    const m = migrateCharacter(c)!;
+    expect(m.rankId).toBe('warrior');
+    expect(m.materials).toEqual({ iron: 3 });
+    expect(m.quests['q1']).toEqual({ accepted: true, progress: 2, claimed: false });
   });
 
   it('v2 存檔遷移至 v3：補上 consumables/titles', () => {

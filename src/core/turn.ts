@@ -5,6 +5,8 @@ import { getEquipItem } from './data/equipment.js';
 import { EVENTS } from './data/events.js';
 import { gainExp } from './progression.js';
 import { effectiveAttrs, equippedDamageMultiplier, addToInventory } from './loadout.js';
+import { advanceQuests, addMaterial } from './phase3.js';
+import { MATERIALS } from './data/materials.js';
 import type { Rng } from './rng.js';
 
 /** 練功獲得的經驗。 */
@@ -125,6 +127,14 @@ export function doRoam(
         c = r.character;
         summary = r.summary;
         levelsGained = r.levelsGained;
+        // 推進「擊敗」型任務
+        c = advanceQuests(c, 'defeat');
+        // 一定機率掉落鑄造材料
+        if (rng.next() < 0.35) {
+          const mat = MATERIALS[Math.floor(rng.next() * MATERIALS.length)]!;
+          c = addMaterial(c, mat.id);
+          summary += `　拾得材料「${mat.name}」。`;
+        }
       } else {
         summary = `與${enemy.name}激鬥 ${battle.rounds.length} 回合，力有未逮，負傷而退。`;
       }

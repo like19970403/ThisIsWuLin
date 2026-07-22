@@ -1,5 +1,5 @@
 import type { Character } from '../core/index.js';
-import { getSect, effectiveAttrs, expToNext, getTitle } from '../core/index.js';
+import { getSect, effectiveAttrs, expToNext, getTitle, getRank } from '../core/index.js';
 
 function Bar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
   const pct = Math.max(0, Math.min(100, (value / max) * 100));
@@ -33,12 +33,16 @@ function Stat({ label, base, eff }: { label: string; base: number; eff: number }
 
 export function StatPanel({ character }: { character: Character }) {
   const sect = getSect(character.sectId);
+  const rank = getRank(character.rankId);
   const eff = effectiveAttrs(character);
   const expNeed = expToNext(character.level);
   return (
     <div className="panel">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-2xl font-bold text-amber-200">{character.name}</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-amber-200">{character.name}</h2>
+          {rank && <span className="text-xs text-amber-500/90">{rank.name}</span>}
+        </div>
         <span className="text-sm text-stone-400">
           {sect?.name ?? '無門無派'} · <span className="text-amber-300">{character.level} 級</span>
         </span>

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Character } from '../core/index.js';
 import type { LogEntry } from '../store/gameStore.js';
 import { StatPanel } from './StatPanel.js';
@@ -7,8 +8,12 @@ import { SaveManager } from './SaveManager.js';
 import { LoadoutPanel } from './LoadoutPanel.js';
 import { ShopModal } from './ShopModal.js';
 import { EncounterModal } from './EncounterModal.js';
+import { ForgeModal } from './ForgeModal.js';
+import { QuestModal } from './QuestModal.js';
 
 export function GameScreen({ character, log }: { character: Character; log: LogEntry[] }) {
+  const [modal, setModal] = useState<'forge' | 'quest' | null>(null);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6">
       <h1 className="mb-6 text-center text-2xl font-bold tracking-[0.3em] text-transparent bg-linear-to-b from-amber-200 to-amber-500 bg-clip-text">
@@ -18,13 +23,25 @@ export function GameScreen({ character, log }: { character: Character; log: LogE
         <div className="space-y-5">
           <StatPanel character={character} />
           <ActionBar />
+          {/* 江湖入口：鑄造坊 / 任務 */}
+          <div className="flex gap-3">
+            <button onClick={() => setModal('forge')} className="btn-secondary flex-1 py-2.5">
+              🔨 鑄造坊
+            </button>
+            <button onClick={() => setModal('quest')} className="btn-secondary flex-1 py-2.5">
+              📜 江湖任務
+            </button>
+          </div>
           <LoadoutPanel character={character} />
           <SaveManager />
         </div>
         <NarrativeLog log={log} />
       </div>
+
       <ShopModal character={character} />
       <EncounterModal character={character} />
+      {modal === 'forge' && <ForgeModal character={character} onClose={() => setModal(null)} />}
+      {modal === 'quest' && <QuestModal character={character} onClose={() => setModal(null)} />}
     </div>
   );
 }

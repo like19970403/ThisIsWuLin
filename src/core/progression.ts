@@ -2,8 +2,8 @@ import type { Character } from './types.js';
 import { clamp } from './rules.js';
 import { TITLE_CONDITIONS } from './data/titles.js';
 
-/** 存檔 schema 版本。1→2（Phase 2 成長）→3（Phase 2b 消耗品/稱號）。 */
-export const SAVE_VERSION = 3;
+/** 存檔 schema 版本。1→2（成長）→3（消耗品/稱號）→4（職位/材料/任務）。 */
+export const SAVE_VERSION = 4;
 
 export const MAX_LEVEL = 30;
 
@@ -99,7 +99,28 @@ export function migrateCharacter(raw: unknown): Character | null {
     // v3 欄位：v1/v2 存檔沒有 → 補預設；v3 已有 → 沿用（冪等）
     consumables: migrateConsumables(r.consumables),
     titles: strArr(r.titles),
+    // v4 欄位：補預設
+    rankId: typeof r.rankId === 'string' ? r.rankId : 'wanderer',
+    materials: migrateConsumables(r.materials), // 同為 id→正整數 計數
+    quests: migrateQuests(r.quests),
   };
+}
+
+function migrateQuests(v: unknown): Character['quests'] {
+  const out: Character['quests'] = {};
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (val && typeof val === 'object') {
+        const q = val as Record<string, unknown>;
+        out[k] = {
+          accepted: q.accepted === true,
+          progress: typeof q.progress === 'number' && q.progress >= 0 ? Math.floor(q.progress) : 0,
+          claimed: q.claimed === true,
+        };
+      }
+    }
+  }
+  return out;
 }
 
 /**

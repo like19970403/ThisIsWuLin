@@ -28,6 +28,12 @@ import {
   resolveEncounter,
   getEncounterNode,
   ENCOUNTER_STARTS,
+  promote,
+  getRank,
+  craft,
+  acceptQuest,
+  claimQuest,
+  gainExp,
   type EquipSlot,
   type EncounterNode,
 } from '../core/index.js';
@@ -79,6 +85,10 @@ interface GameActions {
   useConsumableItem: (itemId: string) => void;
   chooseEncounter: (optionIndex: number) => void;
   closeEncounter: () => void;
+  // ─── Phase 3 ───
+  craftItem: (recipeId: string) => void;
+  accept: (questId: string) => void;
+  claim: (questId: string) => void;
 }
 
 /** 共用：套用一個可能 throw 的角色變換，失敗轉 notice。變換後自動檢查稱號解鎖。 */
@@ -97,12 +107,26 @@ function tryMutate(
   }
 }
 
-/** 套用角色變換後檢查稱號解鎖；有新稱號則產生提示。 */
+/** 套用角色變換後檢查稱號解鎖與職位晉升；有變化則產生提示。 */
 function applyTitles(char: Character): { character: Character; notice: string | null } {
-  const { character, newlyUnlocked } = checkTitles(char);
-  if (newlyUnlocked.length === 0) return { character, notice: null };
-  const names = newlyUnlocked.map((id) => getTitle(id)?.name ?? id).join('、');
-  return { character, notice: `獲得稱號：${names}！` };
+  const notices: string[] = [];
+
+  // 職位晉升（依聲望）
+  const promoted = promote(char);
+  let c = promoted.character;
+  if (promoted.promotedTo.length > 0) {
+    const top = promoted.promotedTo[promoted.promotedTo.length - 1]!;
+    notices.push(`晉升為「${getRank(top)?.name ?? top}」！`);
+  }
+
+  // 稱號解鎖
+  const titled = checkTitles(c);
+  c = titled.character;
+  if (titled.newlyUnlocked.length > 0) {
+    notices.push(`獲得稱號：${titled.newlyUnlocked.map((id) => getTitle(id)?.name ?? id).join('、')}！`);
+  }
+
+  return { character: c, notice: notices.length > 0 ? notices.join(' ') : null };
 }
 
 // Narrator 為模組層級可替換依賴（ADR-001：可插拔）。
@@ -255,6 +279,22 @@ export const useGameStore = create<GameState & GameActions>()(
         }
       },
       closeEncounter: () => set({ pendingEncounter: null }),
+
+      craftItem: (recipeId) => tryMutate(set, get, (c) => craft(c, recipeId)),
+      accept: (questId) => tryMutate(set, get, (c) => acceptQuest(c, questId)),
+      claim: (questId) => {
+        const c = get().character;
+        if (!c) return;
+        try {
+          const { character, reward } = claimQuest(c, questId);
+          // 任務 exp 獎勵在此結算（避免 core 循環相依）
+          const withExp = reward.exp ? gainExp(character, reward.exp).character : character;
+          const { character: finalC, notice } = applyTitles(withExp);
+          set({ character: finalC, notice: notice ?? '任務完成，獎勵已領取。' });
+        } catch (e) {
+          set({ notice: e instanceof Error ? e.message : '繳交失敗。' });
+        }
+      },
 
       exportSave: () => {
         const { version, character, log } = get();

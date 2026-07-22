@@ -61,6 +61,23 @@ export interface Character {
   consumables: Record<string, number>;
   /** 已解鎖的稱號 id */
   titles: string[];
+
+  // ─── Phase 3（SPEC-004）───
+  /** 當前職位 id */
+  rankId: string;
+  /** 鑄造材料：id → 數量 */
+  materials: Record<string, number>;
+  /** 任務進度：questId → 狀態 */
+  quests: Record<string, QuestState>;
+}
+
+/** 單一任務的進度狀態。 */
+export interface QuestState {
+  accepted: boolean;
+  /** 進度計數（如已擊敗數） */
+  progress: number;
+  /** 已繳交領獎 */
+  claimed: boolean;
 }
 
 /** 功法定義（資料表驅動）。Phase 2：被動屬性加成 + 戰鬥發動的傷害倍率。 */
@@ -189,6 +206,52 @@ export interface EncounterNode {
   title: string;
   text: string;
   options: EncounterOption[];
+}
+
+/** 職位階級定義。以聲望門檻線性晉升。 */
+export interface Rank {
+  id: string;
+  /** 階序（0 起，越大越高） */
+  order: number;
+  name: string;
+  /** 晉升所需聲望 */
+  reqFame: number;
+  /** 晉升時一次性獎勵 */
+  reward: { silver?: number; attr?: Partial<Attributes>; itemId?: string };
+}
+
+/** 鑄造材料定義。 */
+export interface Material {
+  id: string;
+  name: string;
+  description: string;
+}
+
+/** 鑄造配方：消耗材料 + 銀兩 → 產出一件裝備。 */
+export interface Recipe {
+  id: string;
+  name: string;
+  /** 產出的裝備 id（見 equipment.ts） */
+  output: string;
+  /** 銀兩花費 */
+  cost: number;
+  /** 材料需求：materialId → 數量 */
+  materials: Record<string, number>;
+}
+
+/** 任務進度條件種類。 */
+export type QuestGoal =
+  | { kind: 'defeat'; count: number }
+  | { kind: 'reachLevel'; level: number }
+  | { kind: 'reachFame'; fame: number };
+
+/** 任務定義。 */
+export interface Quest {
+  id: string;
+  name: string;
+  description: string;
+  goal: QuestGoal;
+  reward: { silver?: number; fame?: number; exp?: number; attr?: Partial<Attributes>; itemId?: string };
 }
 
 /** 敘事供應器介面 — 遊戲邏輯只認這個，不認是哪家 AI（ADR-001 §決策.5）。 */
