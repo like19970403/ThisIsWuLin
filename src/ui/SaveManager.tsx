@@ -9,7 +9,7 @@ export function SaveManager() {
   const resetGame = useGameStore((s) => s.resetGame);
 
   return (
-    <div className="rounded-lg border border-stone-800 bg-stone-950/40 p-4">
+    <div className="panel">
       <button
         onClick={() => setOpen((v) => !v)}
         className="text-sm text-stone-400 hover:text-amber-300"

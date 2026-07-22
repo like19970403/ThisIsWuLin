@@ -36,7 +36,7 @@ export function StatPanel({ character }: { character: Character }) {
   const eff = effectiveAttrs(character);
   const expNeed = expToNext(character.level);
   return (
-    <div className="rounded-lg border border-stone-800 bg-stone-950/40 p-5">
+    <div className="panel">
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-2xl font-bold text-amber-200">{character.name}</h2>
         <span className="text-sm text-stone-400">

@@ -1,4 +1,4 @@
-# 這就是江湖 (ThisIsWuLin)
+# 這就是武林 (ThisIsWuLin)
 
 網頁版**文字 / 回合制江湖 RPG** — 學習 / 練習作品。
 
